@@ -641,7 +641,6 @@ Read-Write. Can be read and written but cannot be executed.
 At the time the control is transferred to the executable, the following machine state must be true:
 
 - The stack pointer must be set to the `ke_stack_start` field of the `KuroExecutableInfo` structure.
-- The base pointer must be set to the `kb_system_table` pointer.
 - The UEFI boot services must be exited.
 - All the general purpose registers must be set to `0` except for `X29` in ARM64 which must be set to the
   `ke_stack_start` field of the `KuroExecutableInfo` structure. Except for registers described in
