@@ -24,8 +24,8 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#ifndef KURO_BOOT_H
-#define KURO_BOOT_H
+#ifndef _KURO_BOOT_H
+#define _KURO_BOOT_H
 
 #include "kuro.h"
 
@@ -49,35 +49,35 @@ typedef struct {
 } KuroModule;
 
 typedef struct {
-  uint32_t RedMask;
-  uint32_t GreenMask;
-  uint32_t BlueMask;
-  uint32_t ReservedMask;
+    uint32_t RedMask;
+    uint32_t GreenMask;
+    uint32_t BlueMask;
+    uint32_t ReservedMask;
 } KURO_EFI_PIXEL_BITMASK;
 
 typedef struct {
-  void *kf_base;
-  uint64_t kf_size;
-  uint32_t kf_width;
-  uint32_t kf_height;
-  uint32_t kf_pixels_per_scanline;
-  uint32_t kf_pixel_format;
-  KURO_EFI_PIXEL_BITMASK kf_pixel_info;
+    void *kf_base;
+    uint64_t kf_size;
+    uint32_t kf_width;
+    uint32_t kf_height;
+    uint32_t kf_pixels_per_scanline;
+    uint32_t kf_pixel_format;
+    KURO_EFI_PIXEL_BITMASK kf_pixel_info;
 } KuroFramebuffer;
 
 typedef struct {
-  uint32_t ks_flags;
-  uintptr_t ks_address;
-  uint64_t ks_size;
-  uint64_t ks_align;
+    uint32_t ks_flags;
+    uint32_t ks_actual_flags;
+    uintptr_t ks_address;
+    uint64_t ks_size;
+    uint64_t ks_align;
 } KuroSegmentInfo;
 
 typedef struct {
-  uintptr_t ke_entry_point;
-  uint64_t ke_segment_count;
-  KuroSegmentInfo* ke_segments;
-  uint64_t ke_stack_start;
-  uint64_t ke_stack_size;
+    uint64_t ke_segment_count;
+    KuroSegmentInfo* ke_segments;
+    uint64_t ke_stack_start;
+    uint64_t ke_stack_size;
 } KuroExecutableInfo;
 
 typedef struct {
@@ -91,4 +91,4 @@ typedef struct {
     KuroExecutableInfo *kb_executable_info;
 } KuroBootInfo;
 
-#endif //KURO_BOOT_H
+#endif // _KURO_BOOT_H

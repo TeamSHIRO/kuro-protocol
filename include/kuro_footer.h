@@ -24,16 +24,16 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#ifndef KURO_FOOTER_H
-#define KURO_FOOTER_H
+#ifndef _KURO_FOOTER_H
+#define _KURO_FOOTER_H
 
 #include "kuro.h"
 
 #define KURO_SIGNATURE_SIZE 64
 
 typedef struct {
-  char k_signature[KURO_SIGNATURE_SIZE];
-  KuroIdentifier k_identifier;
+    char k_signature[KURO_SIGNATURE_SIZE];
+    KuroIdentifier k_identifier;
 } KuroFooter;
 
-#endif //KURO_FOOTER_H
+#endif // _KURO_FOOTER_H

@@ -538,7 +538,9 @@ The following table shows the segment permissions:
 
 The bootloader should aim to set the permissions to be the same as _the Exact_ field in the above table. However, the
 bootloader is not required to do so, but it must not give more permissions than what is specified in the _Allowable_
-field along with not giving fewer permissions than what is specified in the _Exact_ field.
+field along while not giving fewer permissions than what is specified in the _Exact_ field.
+The permissions must however be `W^X` (Write xor Execute) which means that a segment cannot be both writable and
+executable at the same time.
 
 #### ks_actual_flags
 
