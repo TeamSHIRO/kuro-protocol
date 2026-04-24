@@ -101,6 +101,9 @@ All the pointers are fixed to be in the higher half of the address space by the 
 
 Any type that starts with `EFI_` is an UEFI type and is defined in the UEFI specification[^2].
 
+Some UEFI types are prefixed with `KURO_` (resulting in `KURO_EFI_`) to recreate the UEFI types for ease of use without having to
+include the UEFI header file and avoiding name collisions.
+
 ## 2. Executable Structure
 
 A valid KURO executable must be a Position-independent executable (PIE).
@@ -225,6 +228,7 @@ Following the Procedure Call standard for the Arm 64-bit Architecture[^5].
 
 1. `x0` - Pointer to the KURO boot information.
 2. `x1` - Pointer to the executable entry point. The bootloader is expected to `br` to this register.
+3. `x2` - Exception level.
 
 ## 6. KURO Boot Information
 
@@ -236,7 +240,7 @@ typedef struct {
     KuroIdentifier kb_identifier;
     char *kb_boot_id;
     char *kb_cmdline;
-    EFI_SYSTEM_TABLE *kb_system_table;
+    void *kb_system_table;
     KuroMemoryMap *kb_memory_map;
     KuroModule *kb_module;
     KuroFramebuffer *kb_framebuffer;
@@ -262,7 +266,7 @@ This field can be null if no command line is passed to the executable.
 
 #### kb_system_table
 
-Pointer to the EFI system table. Please refer to the UEFI specification[^2] for more information about the EFI system table.
+Pointer to the EFI system table. Please refer to the UEFI specification, `EFI_SYSTEM_TABLE`[^2] for more information about the EFI system table.
 
 Even though the system table is a pointer that points to the EFI system table in the higher half address space,
 the system table will be handed to the executable as-is, which means that the executable must fix the pointers inside
@@ -299,7 +303,7 @@ structure contains the following fields:
 
 ```c++
 typedef struct {
-    EFI_MEMORY_DESCRIPTOR *km_map;
+    void *km_map;
     uint64_t km_map_size;
     uint64_t km_desc_size;
     uint32_t km_desc_version;
@@ -313,10 +317,10 @@ typedef struct {
 
 #### km_map
 
-Point to the start of the memory descriptor array as defined in the UEFI specification[^2].
+Point to the start of the memory descriptor array as defined in the UEFI specification, `EFI_MEMORY_DESCRIPTOR`[^2].
 
 This memory map is the same as the one that is used to call `SetVirtualAddressMap()` in UEFI.
-The `VirtualStart` must be the same as the `PhysicalStart + km_higher_half_base`.
+The `VirtualStart` must be the same as the $ PhysicalStart + km\_higher\_half\_base $.
 
 See [section 11](#11-memory-layout) for more information.
 
@@ -398,7 +402,7 @@ typedef struct {
     uint32_t GreenMask;
     uint32_t BlueMask;
     uint32_t ReservedMask;
-} EFI_PIXEL_BITMASK;
+} KURO_EFI_PIXEL_BITMASK;
 
 typedef struct {
     void *kf_base;
@@ -407,7 +411,7 @@ typedef struct {
     uint32_t kf_height;
     uint32_t kf_pixels_per_scanline;
     uint32_t kf_pixel_format;
-    EFI_PIXEL_BITMASK kf_pixel_info;
+    KURO_EFI_PIXEL_BITMASK kf_pixel_info;
 } KuroFramebuffer;
 ```
 
@@ -436,7 +440,7 @@ Specifies the number of pixels per scanline.
 
 #### kf_pixel_format
 
-A 32-bit unsigned integer that contains `EFI_GRAPHICS_PIXEL_FORMAT` enumerator as defined in the UEFI specification[^2].
+A 32-bit unsigned integer that contains an `EFI_GRAPHICS_PIXEL_FORMAT` enumerator as defined in the UEFI specification[^2].
 
 #### kf_pixel_info
 
@@ -473,7 +477,7 @@ Specifies the top of the stack at the time the control is transferred to the exe
 Following the System V ABI, the alignment of the stack must be misaligned by at least eight bytes as shown in
 the following formula:
 
-$ke\_stack\_start \% 16 = 8$
+$ ke\_stack\_start \% 16 = 8 $
 
 ##### ARM64
 
@@ -493,6 +497,7 @@ Each `KuroSegmentInfo` structure is defined as follows:
 ```c++
 typedef struct {
     uint32_t ks_flags;
+    uint32_t ks_actual_flags;
     uintptr_t ks_address;
     uint64_t ks_size;
     uint64_t ks_align;
@@ -504,9 +509,44 @@ typedef struct {
 
 #### ks_flags
 
-Specifies the permissions of the segment.
+Specifies the permissions of the segment that the bootloader sets up with page permissions.
 
 More information about the flags can be found in the ELF specification[^1].
+
+For a quick reference, the following table shows segment flag bits:
+
+| Name           | Value        | Permission  |
+|----------------|--------------|-------------|
+| `PF_X`         | `0x1`        | `EXECUTE`   |
+| `PF_W`         | `0x2`        | `WRITE`     |
+| `PF_R`         | `0x4`        | `READ`      |
+| `PF_MASKWRITE` | `0x0ff00000` | Unspecified |
+| `PF_MASKREAD`  | `0xf0000000` | Unspecified |
+
+The following table shows the segment permissions:
+
+| Flags            | Value | Exact                | Allowable            |
+|------------------|-------|----------------------|----------------------|
+| none             | 0     | All access denied    | All access denied    |
+| `PF_X`           | 1     | Execute Only         | Read, execute        |
+| `PF_W`           | 2     | Write Only           | Read, write, execute |
+| `PF_W+PF_X`      | 3     | Write, execute       | Read, write, execute |
+| `PF_R`           | 4     | Read Only            | Read, execute        |
+| `PF_R+PF_X`      | 5     | Read, execute        | Read, execute        |
+| `PF_R+PF_W`      | 6     | Read, write          | Read, write, execute |
+| `PF_R+PF_W+PF_X` | 7     | Read, write, execute | Read, write, execute |
+
+The bootloader should aim to set the permissions to be the same as _the Exact_ field in the above table. However, the
+bootloader is not required to do so, but it must not give more permissions than what is specified in the _Allowable_
+field along with not giving fewer permissions than what is specified in the _Exact_ field.
+
+#### ks_actual_flags
+
+Specifies the actual permissions of the segment in memory. This field is used to specify the permissions of the segment
+defined by the executable's program header. Different from `ks_flags` which is used to specify the permissions of the
+segment that the bootloader sets up with page permissions.
+
+See related definitions in [`ks_flags`](#ks_flags)
 
 #### ks_address
 
@@ -560,7 +600,7 @@ executable both explicitly and implicitly, including but not limited to:
 - KuroModule
 - KuroFramebuffer
 - KuroExecutableInfo
-- EFI_SYSTEM_TABLE
+- EFI_SYSTEM_TABLE (copy of the one from the bootloader)
 - Page directory and the other paging-related data structure
 
 The executable memory should be placed at the highest address in the memory as possible, and all the regions must be
@@ -573,13 +613,20 @@ use the EFI allocators to allocate the executable memory.
 
 This region must not be mapped to any physical address when the control is transferred to the executable.
 
+The mapping of this region must be empty and must not be mapped to any physical address.
+
 ### 11.3 Higher Half
 
 This region is mapped to every physical address with an offset, and the offset is the base address of the higher half.
 
+This region must be set up as follows:
+- x86-64: User/Supervisor bit is `0`
+- ARM64: Using `TTBR1_EL1` (or `TTBR1_EL2` if on EL2) to map the region to the higher half and `E0PD1` bit in the
+  `TCR_EL1` (or `TCR_EL2` if on EL2) is set to `1`.
+
 This formula must always be true at the time the control is transferred to the executable:
 
-$Virtual Address = Physical Address + Higher Half Base$
+$ Virtual Address = Physical Address + Higher Half Base $
 
 The offset can be obtained from the `kb_memory_map` structure as described in [section 7](#7-kuro-memory-map).
 
@@ -596,11 +643,11 @@ The executable memory permissions must take precedence over the EFI memory types
 
 Executable memory:
 
-| Memory Type             | Permissions                     |
-|-------------------------|---------------------------------|
-| Executable region       | Described by each segment flags |
-| Program stack region    | `WRITE`                         |
-| Boot information region | `WRITE`                         |
+| Memory Type             | Permissions                                                                         |
+|-------------------------|-------------------------------------------------------------------------------------|
+| Executable region       | Described by each segment flags. See related definitions in [`ks_flags`](#ks_flags) |
+| Program stack region    | `WRITE`                                                                             |
+| Boot information region | `WRITE`                                                                             |
 
 EFI memory types:
 
@@ -640,9 +687,9 @@ Read-Write. Can be read and written but cannot be executed.
 
 At the time the control is transferred to the executable, the following machine state must be true:
 
-- The stack pointer must be set to the `ke_stack_start` field of the `KuroExecutableInfo` structure.
-- The UEFI boot services must be exited.
-- All the general purpose registers must be set to `0` except for `X29` in ARM64 which must be set to the
+- The stack pointer is set to the `ke_stack_start` field of the `KuroExecutableInfo` structure.
+- The UEFI boot services are exited.
+- All the general purpose registers are set to `0` except for `X29` in ARM64 which must be set to the
   `ke_stack_start` field of the `KuroExecutableInfo` structure. Except for registers described in
   [section 5](#5-calling-convention-and-registers).
 - The return address must be set to `0`.
@@ -653,10 +700,10 @@ At the time the control is transferred to the executable, the following machine 
 
 This table lists the bootloader identifier strings that are currently known by the documents.
 
-| Bootloader Identifier String | Description         |
-|------------------------------|---------------------|
-| `UNKNOWN`                    | Unknown Bootloader. |
-| `KURO`                       | KURO Bootloader.    |
+| Bootloader Identifier String | Description                               |
+|------------------------------|-------------------------------------------|
+| `UNKNOWN`                    | Unknown Bootloader.                       |
+| `KURO`                       | KURO Reference Implementation Bootloader. |
 
 > [!NOTE]
 > If you would like to add a new bootloader identifier string to this table, please [contact](#contact) the author of
@@ -668,7 +715,7 @@ In case of any questions or suggestions, please feel free to email
 [mono@themonhub.net](mailto:mono@themonhub.net)
 
 You can get a copy of this document here:
-https://github.com/TeamSHIRO/kuro-protocol/blob/main/docs/protocol.md.
+https://github.com/TeamSHIRO/kuro-protocol/blob/revision-1/docs/protocol.md.
 
 ## Copyright
 
