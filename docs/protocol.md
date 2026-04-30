@@ -7,7 +7,7 @@
 
 ***Revision `1.1` Errata `-`***
 
-**2026-04-30**
+**2026-05-04**
 
 ## Table of Contents
 
@@ -38,9 +38,10 @@
     5. [Permissions](#115-permissions)
 12. [Machine State at Entry](#12-machine-state-at-entry)
 13. [Appendix A: Bootloader Identifier String](#appendix-a-bootloader-identifier-string)
-14. [Contact](#contact)
-15. [Copyright](#copyright)
-16. [References](#references)
+14. [Appendix B: Changes](#appendix-b-changes)
+15. [Contact](#contact)
+16. [Copyright](#copyright)
+17. [References](#references)
 
 ## 1. Introduction
 
@@ -611,7 +612,7 @@ executable both explicitly and implicitly, including but not limited to:
 - KuroModule
 - KuroFramebuffer
 - KuroExecutableInfo
-- EFI_SYSTEM_TABLE (copy of the one from the bootloader)
+- Module data
 - Page directory and the other paging-related data structure
 
 The executable memory should be placed at the highest address in the memory as possible, and all the regions must be
@@ -723,8 +724,12 @@ This table lists the bootloader identifier strings that are currently known by t
 ## Appendix B: Changes
 
 - `1.0` - Initial version.
-- `1.1` - Added requirement for the executable to be in little-endian format and one of the supported architectures in
+- `1.1`
+  - Added requirement for the executable to be in little-endian format and one of the supported architectures in
   the ELF identification located in the ELF header[^1].
+  - Removed `EFI_SYSTEM_TABLE` from being required to be in the boot information region.
+  - Added [Appendix B: Changes](#appendix-b-changes) section.
+  - Added module data in the information required to be in the boot information region.
 
 ## Contact
 
