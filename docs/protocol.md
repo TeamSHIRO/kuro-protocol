@@ -5,9 +5,9 @@
 
 # KURO Boot Protocol
 
-***Revision `1` Errata `-`***
+***Revision `1.1` Errata `-`***
 
-**2026-04-24**
+**2026-04-30**
 
 ## Table of Contents
 
@@ -115,11 +115,19 @@ The following diagram shows an example structure of a KURO executable:
 - The executable must be a position-independent executable (PIE) with ELF header field `e_type` set to `ET_DYN`.
 - The executable must contain a KURO footer at the end of the file.
 - Every `p_align` field must be one of the following:
+
     - `0`
     - `1`
     - `0x1000`
+
 - Segment flags must be `W^X` (Write xor Execute) which means that a segment cannot be both writable and executable at the
   same time.
+- The executable must be in little-endian format as defined in the ELF identification[^1] field
+  `e_ident[EI_DATA]` must be set to `ELFDATA2LSB`.
+- The executable must be a 64-bit executable as defined in the ELF identification[^1] field
+  `e_ident[EI_CLASS]` must be set to `ELFCLASS64`.
+- The executable must have a supported architecture as defined in the ELF header[^1] field
+  `e_machine` must be set to `EM_X86_64` or `EM_AARCH64` depending on the architecture of the executable.
 
 The bootloader must verify the ELF header and KURO footer to ensure that the executable is a valid KURO executable.
 
@@ -240,7 +248,7 @@ typedef struct {
     KuroIdentifier kb_identifier;
     char *kb_boot_id;
     char *kb_cmdline;
-    void *kb_system_table;
+    EFI_SYSTEM_TABLE *kb_system_table;
     KuroMemoryMap *kb_memory_map;
     KuroModule *kb_module;
     KuroFramebuffer *kb_framebuffer;
@@ -303,7 +311,7 @@ structure contains the following fields:
 
 ```c++
 typedef struct {
-    void *km_map;
+    EFI_MEMORY_DESCRIPTOR *km_map;
     uint64_t km_map_size;
     uint64_t km_desc_size;
     uint32_t km_desc_version;
@@ -536,7 +544,8 @@ The following table shows the segment permissions:
 | `PF_R+PF_W`      | 6     | Read, write          | Read, write, execute |
 | `PF_R+PF_W+PF_X` | 7     | Read, write, execute | Read, write, execute |
 
-The bootloader should aim to set the permissions to be the same as _the Exact_ field in the above table. However, the
+As defined by the ELF specification[^1],
+the bootloader should aim to set the permissions to be the same as _the Exact_ field in the above table. However, the
 bootloader is not required to do so, but it must not give more permissions than what is specified in the _Allowable_
 field along while not giving fewer permissions than what is specified in the _Exact_ field.
 The permissions must however be `W^X` (Write xor Execute) which means that a segment cannot be both writable and
@@ -711,13 +720,19 @@ This table lists the bootloader identifier strings that are currently known by t
 > If you would like to add a new bootloader identifier string to this table, please [contact](#contact) the author of
 > this document.
 
+## Appendix B: Changes
+
+- `1.0` - Initial version.
+- `1.1` - Added requirement for the executable to be in little-endian format and one of the supported architectures in
+  the ELF identification located in the ELF header[^1].
+
 ## Contact
 
 In case of any questions or suggestions, please feel free to email
 [mono@themonhub.net](mailto:mono@themonhub.net)
 
 You can get a copy of this document here:
-https://github.com/TeamSHIRO/kuro-protocol/blob/revision-1/docs/protocol.md.
+https://github.com/TeamSHIRO/kuro-protocol/blob/revision-1-1/docs/protocol.md.
 
 ## Copyright
 
