@@ -32,7 +32,7 @@ Inside the `efi` directory, there are additional files containing the EFI defini
 - [`efi_capsule.h`](efi/include/efi/efi_capsule.h) – Containing the EFI definitions for the EFI capsule
 - [`efi_conf.h`](efi/include/efi/efi_conf.h) – Containing the EFI definitions for the EFI configuration table and the
   related definitions
-- [`efi_misc.h`](efi/include/efi/efi_misc.h) – Containing the EFI definitions for the EFI miscellaneous runtimme
+- [`efi_misc.h`](efi/include/efi/efi_misc.h) – Containing the EFI definitions for the EFI miscellaneous runtime
   services
 - [`efi_runtime.h`](efi/include/efi/efi_runtime.h) – Containing the EFI definitions for the EFI runtime services
 - [`efi_time.h`](efi/include/efi/efi_time.h) – Containing the EFI definitions for the EFI time services
